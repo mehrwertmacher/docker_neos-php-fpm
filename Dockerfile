@@ -1,0 +1,42 @@
+FROM php:fpm
+
+#Packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libzip-dev \
+    zip \
+    libmagickwand-dev \
+    git \
+    git-core \
+    mc
+
+RUN pecl install \
+    imagick \
+    xdebug
+
+#PHP Extensions
+RUN    docker-php-ext-install pdo_mysql \
+    && docker-php-ext-install tokenizer \
+    && docker-php-ext-install mbstring \
+    && docker-php-ext-configure zip --with-libzip \
+    && docker-php-ext-install zip\
+    && docker-php-ext-enable imagick\
+    && docker-php-ext-enable xdebug
+
+#Enable XDebug Extension
+RUN    echo "zend_extension=$(find /usr/local/lib/php/extensions/ -name xdebug.so)" > /usr/local/etc/php/conf.d/xdebug.ini \
+    && echo "xdebug.remote_enable=on" >> /usr/local/etc/php/conf.d/xdebug.ini \
+    && echo "xdebug.remote_autostart=off" >> /usr/local/etc/php/conf.d/xdebug.ini
+RUN sed -i -e 's/listen.*/listen = 0.0.0.0:9000/' /usr/local/etc/php-fpm.conf
+# Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+# Cleanup
+RUN apt-get purge --auto-remove -y g++ \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Neos
+WORKDIR /var/www/html
+RUN composer create-project neos/neos-base-distribution ./
+RUN chown -R www-data:www-data *
+
+CMD ["php-fpm"]
