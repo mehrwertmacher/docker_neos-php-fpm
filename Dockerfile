@@ -1,5 +1,8 @@
 FROM php:fpm
 
+COPY ./conf/php-custom.ini /usr/local/etc/php/conf.d/php-fpm-neos.ini
+COPY ./conf/www.conf /usr/local/etc/php-fpm.d/www.conf
+
 #Packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libzip-dev \
@@ -23,8 +26,7 @@ RUN    docker-php-ext-install pdo_mysql \
     && docker-php-ext-enable xdebug
 
 #Enable XDebug Extension
-RUN    echo "zend_extension=$(find /usr/local/lib/php/extensions/ -name xdebug.so)" > /usr/local/etc/php/conf.d/xdebug.ini \
-    && echo "xdebug.remote_enable=on" >> /usr/local/etc/php/conf.d/xdebug.ini \
+RUN    echo "xdebug.remote_enable=on" >> /usr/local/etc/php/conf.d/xdebug.ini \
     && echo "xdebug.remote_autostart=off" >> /usr/local/etc/php/conf.d/xdebug.ini
 RUN sed -i -e 's/listen.*/listen = 0.0.0.0:9000/' /usr/local/etc/php-fpm.conf
 # Composer
@@ -37,6 +39,5 @@ RUN apt-get purge --auto-remove -y g++ \
 # Install Neos
 WORKDIR /var/www/html
 RUN composer create-project neos/neos-base-distribution ./
-RUN chown -R www-data:www-data *
 
-CMD ["php-fpm"]
+CMD ["php-fpm", "--allow-to-run-as-root"]
